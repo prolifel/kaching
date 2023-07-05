@@ -1,0 +1,65 @@
+name: 💀💀💀
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.19'
+
+      - name: Build
+        run: go build -v ./...
+
+      # - name: Test
+      #   run: go test -v ./...
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: binary-artifact
+          path: ./kaching
+  deploy:
+    runs-on: ubuntu-20.04
+    needs: build
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: binary-artifact
+
+      - name: Adding private SSH key to ssh-agent
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        run: |
+          mkdir -p ~/.ssh
+          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          ssh-add - <<< "${{ secrets.SSH_PRIVATE_KEY }}"
+
+      - name: Build binary
+        run: go build ./cmd/www
+
+      - name: scp binary to server and apply latest version
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        run: |
+          scp -o StrictHostKeyChecking=no -r my-binary ${{ secrets.PRODUCTION_USERNAME }}@${{ secrets.PRODUCTION_HOST }}:${{ secrets.KACHING_PATH }}/kaching.new
+          ssh -o StrictHostKeyChecking=no ${{ secrets.PRODUCTION_USERNAME }}@${{ secrets.PRODUCTION_HOST }} << 'ENDSSH'
+            echo "** restarting service tof apply new version **"
+            sudo service kaching stop
+            echo "** service stopped **"
+            mv ${{ secrets.KACHING_PATH }}/kaching.new ${{ secrets.KACHING_PATH }}/kaching
+            chmod +x ${{ secrets.KACHING_PATH }}/kaching
+            sudo service kaching start
+            echo "** service started **"
+            ps -ef | grep kaching
+          ENDSSH
