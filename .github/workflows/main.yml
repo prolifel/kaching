@@ -44,15 +44,15 @@ jobs:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         run: |
           mkdir -p ~/.ssh
-          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+          eval `ssh-agent -s`
           ssh-keyscan github.com >> ~/.ssh/known_hosts
-          ssh-add - <<< "${{ secrets.SSH_PRIVATE_KEY }}"
+          ssh-add <<< "${{ secrets.SSH_PRIVATE_KEY }}"
 
       - name: scp binary to server and apply latest version
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         run: |
-          scp -o StrictHostKeyChecking=no -r my-binary ${{ secrets.PRODUCTION_USERNAME }}@${{ secrets.PRODUCTION_HOST }}:${{ secrets.KACHING_PATH }}/kaching.new
+          scp -o StrictHostKeyChecking=no -r kaching ${{ secrets.PRODUCTION_USERNAME }}@${{ secrets.PRODUCTION_HOST }}:${{ secrets.KACHING_PATH }}/kaching.new
           ssh -o StrictHostKeyChecking=no ${{ secrets.PRODUCTION_USERNAME }}@${{ secrets.PRODUCTION_HOST }} << 'ENDSSH'
             echo "** restarting service tof apply new version **"
             sudo service kaching stop
