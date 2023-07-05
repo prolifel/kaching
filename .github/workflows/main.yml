@@ -47,8 +47,8 @@ jobs:
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         run: |
-          scp -o StrictHostKeyChecking=no -r kaching ${{ secrets.PRODUCTION_USERNAME }}@${{ secrets.PRODUCTION_HOST }}:${{ secrets.KACHING_PATH }}/kaching.new
-          ssh -o StrictHostKeyChecking=no ${{ secrets.PRODUCTION_USERNAME }}@${{ secrets.PRODUCTION_HOST }} << 'ENDSSH'
+          scp -o StrictHostKeyChecking=no -r kaching ${{ secrets.PRODUCTION_USERNAME }}@${{ secrets.PRODUCTION_SERVER }}:${{ secrets.KACHING_PATH }}/kaching.new
+          ssh -o StrictHostKeyChecking=no ${{ secrets.PRODUCTION_USERNAME }}@${{ secrets.PRODUCTION_SERVER }} << 'ENDSSH'
             echo "** restarting service tof apply new version **"
             sudo service kaching stop
             echo "** service stopped **"
