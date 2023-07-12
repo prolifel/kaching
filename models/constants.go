@@ -1,7 +1,11 @@
 package models
 
 const (
-	EnvAppTimezone    = "APP_TIMEZONE"
+	EnvAppTimezone = "APP_TIMEZONE"
+	EnvAppName     = "APP_NAME"
+	EnvAppHost     = "APP_HOST"
+	EnvAppKey      = "APP_KEY"
+
 	EnvDBHost         = "DB_HOST"
 	EnvDBPort         = "DB_PORT"
 	EnvDBUser         = "DB_USER"

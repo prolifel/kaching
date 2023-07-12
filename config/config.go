@@ -6,18 +6,21 @@ import (
 	"os"
 	"time"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
 	"github.com/prolifel/kaching/models"
 )
 
 type Config struct {
-	DB *DB
+	DB      *DB
+	RestAPI *fiber.App
 }
 
 func New() Config {
 	var cfg Config
 
 	InitEnv()
+	InitTimezone()
 
 	return cfg
 }
