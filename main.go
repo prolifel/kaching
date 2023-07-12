@@ -8,6 +8,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/keyauth"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/prolifel/kaching/config"
 	"github.com/prolifel/kaching/models"
 )
@@ -58,6 +59,9 @@ func main() {
 	appNew.Use(
 		keyauth.New(keyauth.Config{
 			Validator: validateAPIKey,
+		}),
+		logger.New(logger.Config{
+			Format: "[${ip}]:${port} ${status} - ${method} ${path} - ${reqHeader:Authorization}\n",
 		}),
 	)
 
