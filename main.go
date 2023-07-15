@@ -1,16 +1,20 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/keyauth"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/prolifel/kaching/config"
 	"github.com/prolifel/kaching/models"
+	"github.com/redis/go-redis/v9"
 )
 
 func validateAPIKey(c *fiber.Ctx, key string) (isValid bool, err error) {
@@ -54,6 +58,12 @@ func main() {
 
 	config.Catch(app.InitProgresql())
 
+	client := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+
 	appNew := fiber.New()
 
 	appNew.Use(
@@ -72,7 +82,19 @@ func main() {
 			return c.Status(fiber.StatusBadRequest).JSON("gak valid user id mu bos 💀")
 		}
 
-		var user models.UserResponse
+		var (
+			user models.UserResponse
+		)
+
+		userRedis := client.HGetAll(c.UserContext(), fmt.Sprintf("users:%d", userID)).Val()
+		if _, ok := userRedis["user_id"]; ok {
+			user.UserID, _ = strconv.ParseInt(userRedis["user_id"], 10, 64)
+			user.Email = userRedis["email"]
+			user.Name = userRedis["name"]
+			user.DataSource = "redis"
+
+			return c.Status(fiber.StatusOK).JSON(user)
+		}
 
 		app.DB.QueryRowxContext(c.UserContext(), `
 			select
@@ -83,6 +105,23 @@ func main() {
 			where user_id = $1
 			limit 1;
 		`, userID).StructScan(&user)
+
+		go func() {
+			userMap := map[string]string{
+				"user_id": fmt.Sprint(user.UserID),
+				"email":   user.Email,
+				"name":    user.Name,
+			}
+			for k, v := range userMap {
+				err := client.HSet(context.Background(), fmt.Sprintf("users:%d", userID), k, v).Err()
+				if err != nil {
+					log.Printf("error while hset: %v", err.Error())
+				}
+			}
+			client.Expire(context.Background(), fmt.Sprintf("users:%d", userID), time.Second*10)
+		}()
+
+		user.DataSource = "db"
 
 		return c.Status(fiber.StatusOK).JSON(user)
 	})
